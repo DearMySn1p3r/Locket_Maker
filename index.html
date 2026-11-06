@@ -139,7 +139,7 @@ input[type=range]:disabled{opacity:.4}
   background:radial-gradient(circle,color-mix(in srgb,var(--fg) 12%,transparent) 1px,transparent 1.4px) 0 0/20px 20px, var(--bg)}
 .holder{position:relative;min-width:100%;min-height:100%;width:max-content;display:grid;place-items:center;padding:32px}
 .holder canvas{display:block;touch-action:none;border-radius:6px;box-shadow:0 24px 60px -24px color-mix(in srgb,var(--accent) 70%,transparent),0 2px 8px rgba(20,25,40,.06)}
-.ed{position:absolute;z-index:3;padding:9px 14px;border-radius:12px;border:1.5px solid var(--accent);background:var(--panel);font:600 14px var(--sans);box-shadow:0 12px 30px -12px rgba(20,25,40,.35);outline:none}
+.ed{position:absolute;z-index:3;resize:none;line-height:1.4;padding:9px 14px;border-radius:12px;border:1.5px solid var(--accent);background:var(--panel);font:600 14px var(--sans);box-shadow:0 12px 30px -12px rgba(20,25,40,.35);outline:none}
 .board.over{outline:2px dashed var(--accent);outline-offset:-8px}
 .zoom{display:flex;align-items:center;gap:4px}
 .zoom .b{padding:5px 10px;border-radius:8px}
@@ -246,7 +246,7 @@ input[type=range]:disabled{opacity:.4}
           <div class="f"><label for="t_bot">페어 이름 아래 작은 글씨</label><input type="text" id="t_bot" data-t="bot" maxlength="60"></div>
         </div>
         <div class="sec"><div class="lab"><span>Paragraph</span><label class="sw"><input type="checkbox" data-show="para" aria-label="문단 표시"></label></div>
-          <div class="f"><label for="t_para">짧은 문단 · 자동 줄바꿈</label><textarea id="t_para" data-t="para" maxlength="180"></textarea></div>
+          <div class="f"><label for="t_para">짧은 문단 · 엔터로 줄바꿈</label><textarea id="t_para" data-t="para" maxlength="180"></textarea></div>
         </div>
         <div class="sec"><div class="lab"><span>Etc</span><label class="sw"><input type="checkbox" data-show="deco" aria-label="장식 표시"></label></div>
           <div class="f"><label for="t_by">작성자</label><input type="text" id="t_by" data-t="by" maxlength="24"></div>
@@ -320,7 +320,7 @@ input[type=range]:disabled{opacity:.4}
 
   <section class="main">
     <div class="bar top"><span class="t">미리보기</span><span class="sp"></span><div class="seg" data-seg="ratio"><button type="button" data-v="sq">1 : 1</button><button type="button" data-v="pt">4 : 5</button></div><span class="sp"></span><span class="meta" id="metaSize">1080 × 1080</span></div>
-    <div class="board" id="board"><div class="holder"><input id="ed" class="ed" type="text" hidden aria-label="텍스트 바로 수정"><canvas id="cv" aria-label="로켓 페어틀 미리보기. 하트를 누르면 펼친 상태로 멈추고 이미지를 옮길 수 있어요."></canvas></div></div>
+    <div class="board" id="board"><div class="holder"><textarea id="ed" class="ed" rows="1" hidden aria-label="텍스트 바로 수정"></textarea><canvas id="cv" aria-label="로켓 페어틀 미리보기. 하트를 누르면 펼친 상태로 멈추고 이미지를 옮길 수 있어요."></canvas></div></div>
     <div class="bar bottom">
       <div class="zoom"><button class="b" id="zOut" type="button" aria-label="축소">−</button><output id="vzO">100%</output><button class="b" id="zIn" type="button" aria-label="확대">+</button><button class="b" id="zFit" type="button">맞춤</button></div>
       <span class="vr"></span>
@@ -378,7 +378,8 @@ const SANS=(px,w=700)=>`${w} ${px}px ${bodyFam()},sans-serif`;
 function ensureFonts(){if(!document.fonts||!document.fonts.load)return Promise.resolve();const t=Object.values(S.t).join('')+'ADDIMAGE925AB&+';
   return Promise.all([BIGF.sans(60),BIGF.serif(60),BIGF.round(60),SCRIPT(30),SANS(16),SANS(16,500),SANS(16,600),SANS(16,800),'600 30px "Cormorant Garamond"','italic 500 30px "Cormorant Garamond"','400 30px "Great Vibes"','400 30px "Pinyon Script"','400 30px "Allura"','400 30px "Parisienne"',SANS(16,700),HEAVY(30),'500 30px "DM Mono"','400 30px "Silkscreen"','700 30px "Silkscreen"','800 30px "Nanum Myeongjo"','400 30px "Black Han Sans"'].map(f=>document.fonts.load(f,t).catch(()=>{}))).then(()=>{texDirty=true})}
 function fitText(ctx,text,maxW){text=text||'';if(ctx.measureText(text).width<=maxW)return text;let t=[...text];while(t.length&&ctx.measureText(t.join('')+'…').width>maxW)t.pop();return t.join('')+'…'}
-function wrapLines(ctx,text,mw,max){const out=[];let cur='';for(const tok of text.split(/(\s+)/)){if(!tok)continue;const tryS=cur+tok;if(ctx.measureText(tryS).width<=mw||!cur.trim()){if(ctx.measureText(tryS).width>mw){for(const ch of tok){if(ctx.measureText(cur+ch).width>mw&&cur.trim()){out.push(cur.trim());cur=''}cur+=ch}}else cur=tryS}else{out.push(cur.trim());cur=tok.trimStart()}}
+function wrapLines(ctx,text,mw,max){const all=[];for(const para of String(text||'').split(/\r?\n/)){if(!para.trim()){all.push('');continue}all.push(...wrap1(ctx,para,mw,99))}while(all.length&&!all[all.length-1])all.pop();return all.slice(0,max)}
+function wrap1(ctx,text,mw,max){const out=[];let cur='';for(const tok of text.split(/(\s+)/)){if(!tok)continue;const tryS=cur+tok;if(ctx.measureText(tryS).width<=mw||!cur.trim()){if(ctx.measureText(tryS).width>mw){for(const ch of tok){if(ctx.measureText(cur+ch).width>mw&&cur.trim()){out.push(cur.trim());cur=''}cur+=ch}}else cur=tryS}else{out.push(cur.trim());cur=tok.trimStart()}}
   if(cur.trim())out.push(cur.trim());if(out.length>max){out[max-1]=fitText(ctx,out.slice(max-1).join(' '),mw);out.length=max}return out}
 
 /* heart geometry (unit box, width 1) */
@@ -581,7 +582,7 @@ function drawFront(ctx,rev){const C=S.c,T=S.t,sh=S.fx.show,R=RAT[S.fx.ratio],g=G
     const tA=rot(P3('a',0,.5*g.h,0,HOLD,g)),tB=rot(P3('b',0,.5*g.h,0,HOLD,g)),ly=Math.max(tA.y,tB.y)+W*.045+(1-r1)*8;if(T.na)nameLabel(ctx,'na',T.na,tA.x,ly);if(T.nb)nameLabel(ctx,'nb',T.nb,tB.x,ly);ctx.restore()}
   if(r1>0&&T.big){ctx.save();ctx.globalAlpha=r1;drawBig(ctx,r1);ctx.restore()}
   if(r2>0&&sh.lines&&T.bot){ctx.save();ctx.globalAlpha=r2;const fs=W*.016;ctx.font=SANS(fs,600);spacing(ctx,(fs*.06).toFixed(1)+'px');ctx.fillStyle=alpha(C.ink,.7);txt(ctx,'bot',fitText(ctx,T.bot,W*.6),W/2,H*R.bot+H*.008+(1-r2)*10,'center');spacing(ctx,'0px');ctx.restore()}
-  if(r3>0&&sh.para&&T.para){ctx.save();ctx.globalAlpha=r3;const fs=W*.0168;ctx.font=SANS(fs,500);ctx.fillStyle=alpha(C.ink,.6);const mw=W*.68,lh=fs*1.6;const ls=wrapLines(ctx,T.para,mw,R.lines);const y0=H*R.p0+fs+(1-r3)*10;
+  if(r3>0&&sh.para&&T.para){ctx.save();ctx.globalAlpha=r3;const fs=W*.0168;ctx.font=SANS(fs,500);ctx.fillStyle=alpha(C.ink,.6);const mw=W*.68,lh=fs*1.32;const ls=wrapLines(ctx,T.para,mw,R.lines);const y0=H*R.p0+fs+(1-r3)*10;
     ls.forEach((l,i)=>{ctx.textAlign='center';ctx.fillText(l,W/2,y0+i*lh)});ctx.textAlign='left';reg('para',W/2-mw/2,y0-fs,mw,ls.length*lh);ctx.restore()}
   if(T.by){ctx.save();const fs=W*.014;ctx.font=SANS(fs,600);spacing(ctx,(W*.0005).toFixed(1)+'px');
     if(th==='sticker'){const t=T.by,tw=ctx.measureText(t).width,w=tw+fs*2,h=fs*2.2,x=W*.86,y=H*.94;rr(ctx,x-w/2,y-h/2,w,h,h/2);ctx.fillStyle=C.ink;ctx.fill();ctx.fillStyle=C.bg;txt(ctx,'by',t,x,y+fs*.36,'center')}
@@ -639,12 +640,12 @@ board.addEventListener('dragover',e=>{e.preventDefault();board.classList.add('ov
 board.addEventListener('drop',e=>{e.preventDefault();board.classList.remove('over');const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(!f)return;const hh=hitHeart(toD(e));loadFile(hh&&hh.k||active,f)});
 document.addEventListener('paste',e=>{if(e.target.matches&&e.target.matches('input[type=text],textarea'))return;const it=[...(e.clipboardData?.items||[])].find(i=>i.type.startsWith('image/'));if(it){loadFile(active,it.getAsFile());status(`붙여넣은 이미지를 ${active.toUpperCase()} 하트에 넣었어요.`)}});
 const ed=$('#ed');let edKey=null,edOrig='';
-function openEditor(k,cx,cy){const hr=$('.holder').getBoundingClientRect();edKey=k;edOrig=S.t[k]||'';ed.value=edOrig;const inp=$(`[data-t="${k}"]`);ed.maxLength=inp&&inp.maxLength>0?inp.maxLength:60;ed.hidden=false;
+function openEditor(k,cx,cy){const hr=$('.holder').getBoundingClientRect();edKey=k;edOrig=S.t[k]||'';ed.value=edOrig;ed.rows=k==='para'?Math.min(6,Math.max(1,edOrig.split('\n').length)):1;const inp=$(`[data-t="${k}"]`);ed.maxLength=inp&&inp.maxLength>0?inp.maxLength:60;ed.hidden=false;
   const w=Math.min(k==='para'?520:320,hr.width-16);ed.style.width=w+'px';ed.style.left=Math.max(8,Math.min(hr.width-w-8,cx-hr.left-w/2))+'px';ed.style.top=Math.max(8,Math.min(hr.height-52,cy-hr.top-24))+'px';ed.focus();ed.select()}
 function syncField(k,v){const inp=$(`[data-t="${k}"]`);if(inp)inp.value=v}
 ed.addEventListener('input',()=>{if(!edKey)return;S.t[edKey]=ed.value;syncField(edKey,ed.value);persist();ensureFonts()});
 function closeEd(revert){if(!edKey)return;if(revert){S.t[edKey]=edOrig;syncField(edKey,edOrig);persist()}edKey=null;ed.hidden=true}
-ed.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();closeEd(false)}else if(e.key==='Escape')closeEd(true)});ed.addEventListener('blur',()=>closeEd(false));
+ed.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){if(e.shiftKey&&edKey==='para'){setTimeout(()=>{ed.rows=Math.min(6,ed.value.split('\n').length)});return}e.preventDefault();closeEd(false)}else if(e.key==='Escape')closeEd(true)});ed.addEventListener('blur',()=>closeEd(false));
 
 /* panels */
 function setActive(k){active=k;$$('.tile').forEach(el=>el.classList.toggle('on',el.dataset.slot===k));syncSel()}
